@@ -1,0 +1,410 @@
+unit Unit1;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, Grids, StdCtrls, RegularExpressions, RegularExpressionsCore, RegularExpressionsConsts;
+
+type
+  TMainFrm = class(TForm)
+    LabelEnterPace: TLabel;
+    EditEnterPace: TEdit;
+    ButtonAnalyze: TButton;
+    StringGrid: TStringGrid;
+    LabelZNumber: TLabel;
+    procedure ButtonAnalyzeClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+type
+DynamicMatrix = array of array of Integer;
+DynamicArray = array of String;
+
+var
+  MainFrm: TMainFrm;
+  CodeFile: Text;
+  AdjacencyMatrix: DynamicMatrix;
+  ArrayofLines: DynamicArray;
+
+
+
+implementation
+
+
+
+{$R *.dfm}
+
+procedure TMainFrm.ButtonAnalyzeClick(Sender: TObject);
+  var
+  ExitNode,i,CurrentNode,NewBlockPosition,Z:integer;
+  RegEx:TRegEx;
+  MainBlock: string;
+  ArcCount: integer;
+
+
+  procedure DeleteComments;
+    var
+    i,j:integer;
+    Statement: string;
+    MultilineCommentisOpen: boolean;
+
+    procedure DeleteSingleLineComments(var Line:string; var MultilineCommentisOpen: boolean);
+      var
+      i:integer;
+      StringisOpen,CommentDeleted:boolean;
+
+      begin
+        StringisOpen:=False;
+        CommentDeleted:=False;
+        i:=1;
+        while (i<=(length(Line)-1)) and not(CommentDeleted) do
+        begin
+          if Line[i]='"' then
+            if not(StringIsOpen) then
+              StringisOpen:=True else
+              StringisOpen:=False;
+          if (Line[i]='/') and (Line[i+1]='*') and (not(StringisOpen)) then
+              MultilineCommentisOpen:=True;
+          if (Line[i]='*') and (Line[i+1]='/') and (not(StringisOpen)) then
+              MultilineCommentisOpen:=False;
+          if ((Line[i]='/') and (Line[i+1]='/')) and ((not(StringisOpen)) and (not(MultilineCommentisOpen))) then
+          begin
+            Delete(Line, i,length(Line)-i+1);
+            CommentDeleted:=True;
+          end;
+          inc(i);
+        end;
+      end;
+
+    procedure DeleteStrings(var Line:string);
+      var
+      i:integer;
+      StringisOpen:boolean;
+      BufLine: string;
+
+      begin
+        StringisOpen:=False;
+        BufLine:='';
+        for i:=1 to length(Line) do
+        begin
+          if Line[i]='"' then
+            if not(StringIsOpen) then
+              StringisOpen:=True
+            else
+              StringisOpen:=False;
+          if (not(StringisOpen)) and (Line[i]<>'"') then
+            BufLine:=BufLine+Line[i];
+        end;
+        Line:=BufLine;
+      end;
+
+
+    procedure DeleteMultiLineComments(var Line:string; var MultilineCommentisOpen: boolean);
+      var
+      i:integer;
+      StringisOpen:boolean;
+      BufLine: String;
+
+      begin
+        StringisOpen:=False;
+        BufLine:='';
+        for i:=1 to (length(Line)-1) do
+        begin
+          if Line[i]='"' then
+            if not(StringIsOpen) then
+              StringisOpen:=True else
+              StringisOpen:=False;
+          if (Line[i]='/') and (Line[i+1]='*') and (not(StringisOpen)) then
+            MultilineCommentisOpen:=True;
+          if (Line[i]='*') and (Line[i+1]='/') and (not(StringisOpen)) then
+            begin
+            MultilineCommentisOpen:=False;
+            Delete(Line,i,2);
+            Insert(' ',Line,i);
+            end;
+          if not(MultilineCommentisOpen) then
+          begin
+            BufLine:=BufLine+Line[i];
+            if i=(length(Line)-1) then
+              BufLine:=BufLine+Line[i+1];
+          end;
+        end;
+        Line:=BufLine;
+      end;
+
+
+    begin
+      MultilineCommentisOpen:=False;
+      for i:=0 to (length(ArrayofLines)-1) do
+      begin
+        DeleteSingleLineComments(ArrayofLines[i],MultiLineCommentisOpen);
+      end;
+
+      MultilineCommentisOpen:=False;
+      for i:=0 to (length(ArrayofLines)-1) do
+      begin
+        DeleteMultiLineComments(ArrayofLines[i],MultiLineCommentisOpen);
+      end;
+
+      for i:=0 to (length(ArrayofLines)-1) do
+      begin
+        DeleteStrings(ArrayofLines[i]);
+      end;
+
+    end;
+
+
+  procedure AddNode(var AdjacencyMatrix: DynamicMatrix);
+    var i,j:integer;
+    begin
+      SetLength(AdjacencyMatrix,(length(AdjacencyMatrix)+1));
+      For i:=0 to (length(AdjacencyMatrix)-1) do
+      begin
+        SetLength(AdjacencyMatrix[i],length(AdjacencyMatrix));
+      end;
+    end;
+
+    procedure MakeEdge;
+    begin
+      AddNode(AdjacencyMatrix);
+      AdjacencyMatrix[CurrentNode,high(AdjacencyMatrix[CurrentNode])]:=1;
+    end;
+
+
+  procedure FindBegin;
+    var
+    i,BracketsCount:integer;
+
+  begin
+    i:=0;
+    MainBlock:='';
+    NewBlockPosition:=0;
+    BracketsCount:=-1;
+    while (i<=(length(ArrayofLines)-1)) and (BracketsCount<>0) do
+    begin
+      if RegEx.IsMatch(ArrayofLines[i],'^\w+\s+main(.+)') then
+      begin
+        inc(i);
+        BracketsCount:=1;
+        if RegEx.IsMatch(ArrayofLines[i],'{') then
+          inc(i);
+        while (i<=(length(ArrayofLines)-1)) do
+        begin
+          if RegEx.IsMatch(ArrayofLines[i],'.*{') then
+            inc(BracketsCount);
+          if RegEx.IsMatch(ArrayofLines[i],'.*}') then
+            dec(BracketsCount);
+          if (BracketsCount<>0) then
+          begin
+            MainBlock:=MainBlock+ArrayofLines[i];
+            inc(i);
+          end;
+        end;
+
+      end;
+      inc(i);
+    end;
+
+  end;
+
+  procedure AnalyzeBlock(Block : string);
+    var
+    i:integer;
+    LastNode,Z:integer;
+    Statement, BlockIf,BlockElse: string;
+    Found : boolean;
+    IfContains,ElseContains: boolean;
+    NewBlockisOpen,NewBlockisClosed,HasBlock,HasBlockIf,HasBlockElse:Boolean;
+
+    procedure AnalyzeSubBlock(var Block:string);
+    var
+      BracketsCount,j:integer;
+    begin
+        BracketsCount:=1;
+        j:=i;
+        Block:='';
+        while BracketsCount<>0 do
+        begin
+          if RegEx.IsMatch(ArrayofLines[i],'.*{') then
+            inc(BracketsCount);
+          if RegEx.IsMatch(ArrayofLines[i],'.*}') then
+            dec(BracketsCount);
+          if (BracketsCount<>0) then
+          begin
+            Block:=Block+ArrayofLines[j];
+            inc(j);
+          end;
+        end;
+    end;
+
+    procedure FindElse;
+
+    begin
+      if RegEx.IsMatch(Statement,'else\s*?') then
+      begin
+        MakeEdge;
+        ElseContains:=True;
+        inc(ArcCount);
+        if RegEx.IsMatch(ArrayofLines[i],'.*{') then
+          AnalyzeSubBlock;
+      end;
+    end;
+
+
+    procedure FindIf;
+
+
+    begin
+      IfContains:=False;
+      if RegEx.IsMatch(Statement,'if\s*\((.+?)\)\s*') then
+      begin
+        MakeEdge;
+        IfContains:=True;
+        inc(ArcCount);
+        if RegEx.IsMatch(ArrayofLines[i],'.*{') then
+        begin
+          HasBlockIf:=True;
+          AnalyzeSubBlock(BlockIf);
+        end;
+        if not HasBlockIf then
+        begin
+          repeat
+            Statement:=Statement + Block[i];
+            inc(i);
+          until (Block[i-1]=';') or (i>length(Block));
+          FindElse;
+        end;
+        if ElseContains then
+          begin
+            inc(CurrentNode);
+            MakeEdge;
+            inc(CurrentNode);
+            AdjacencyMatrix[high(AdjacencyMatrix[CurrentNode]),CurrentNode]:=1;
+            inc(CurrentNode);
+          end
+          else
+          begin
+            MakeEdge;
+            inc(CurrentNode);
+            AdjacencyMatrix[high(AdjacencyMatrix[CurrentNode]),CurrentNode]:=1;
+            inc(CurrentNode);
+          end;
+      end;
+
+    end;
+
+
+
+    procedure FindForWhile;
+    begin
+       if RegEx.IsMatch(Statement,'^\s*while\s*\(\s*(\w+)\s*\)\s*\{\s*$') or RegEx.IsMatch(Statement,'^\s*for\s*\(\s*(\w+)\s*\)\s*\{\s*$') then
+       begin
+         MakeEdge;
+         AdjacencyMatrix[high(AdjacencyMatrix[CurrentNode]),CurrentNode]:=1;
+         inc(CurrentNode);
+         inc(ArcCount);
+       end;
+    end;
+
+  begin
+    AddNode(AdjacencyMatrix);
+    i:=1;
+    HasBlock:=False;
+    repeat
+
+      //отделение оператора
+      Statement:='';
+      NewBlockIsOpen:=False;
+      NewBlockIsClosed:=False;
+      HasBlock:=False;
+      repeat
+        Statement:=Statement + Block[i];
+        inc(i);
+      until (Block[i-1]=';') or (i>length(Block));
+
+      if IfContains = False then
+      begin
+        FindIf
+      end
+      else
+      begin
+        if RegEx.IsMatch(ArrayofLines[i],'.*{') then
+          AnalyzeSubBlock;
+        FindElse;
+
+        IfContains:=False;
+        ElseContains:=False;
+      end;
+      FindForWhile;
+
+      if HasBlock then
+      begin
+        i:= NewBlockPosition;
+      end;
+    until i>length(Block);
+
+    MakeEdge;
+    inc(CurrentNode);
+  end;
+
+
+  procedure ShowMatrix(const Matrix:DynamicMatrix);
+  var i,j:integer;
+  begin
+    with StringGrid do
+    begin
+      RowCount:=ExitNode;
+      ColCount:=ExitNode;
+      for i := 0 to RowCount do
+        Cells[0,i]:=InttoStr(i);
+      for i := 0 to RowCount do
+        Cells[i,0]:=InttoStr(i);
+      for i:=1 to RowCount do
+        for j:=1 to ColCount do
+        begin
+          Cells[j,i]:=InttoStr(Matrix[i,j]);
+        end;
+      Visible:=True;
+    end;
+  end;
+
+begin
+  if EditEnterPace.text='' then
+    ShowMessage('Укажите имя файла')
+  else
+  begin
+    AssignFile(CodeFile,EditEnterPace.Text);
+    Reset(CodeFile);
+    while (not (Eof(Codefile))) do
+      begin
+      SetLength(ArrayofLines,length(ArrayofLines)+1);
+      Readln(CodeFile,ArrayofLines[length(ArrayofLines)-1]);
+      end;
+    CloseFile(CodeFile);
+    DeleteComments;
+    RegEx.Create('');
+    FindBegin;
+    CurrentNode:=0;
+    ArcCount:=0;
+    AnalyzeBlock(MainBlock);
+
+
+    ExitNode:=CurrentNode;
+    ShowMatrix(AdjacencyMatrix);
+    Z:=CurrentNode-ArcCount+2;
+    LabelZNumber.Caption:=LabelZNumber.Caption+inttostr(Z);
+    LabelZNumber.Visible:=True;
+{//моя проверка
+    AssignFile(output,'output.txt');
+    Rewrite(Output);
+    for i:=0 to (length(ArrayofLines)-1) do
+      Writeln(output,ArrayofLines[i]);
+    CloseFile(output); }
+  end;
+end;
+
+end.

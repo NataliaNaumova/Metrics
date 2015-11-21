@@ -1,0 +1,114 @@
+#include <stdlib.h>
+#include <conio.h>
+#include <stdio.h>
+#include <string.h>
+
+int main()
+
+	char str[20];
+	printf();
+	gets_s(str);
+	printf();
+
+
+	char PrevLett;
+	char strbuf[20];
+	int k;
+	int i;
+	int j;
+
+	while (strlen(str) != 0) 
+	{
+		PrevLett = str[0];
+		i = 1;
+		while ( (str[i] != PrevLett) && (str[i] != '\0') )
+ 		{
+			printf(,PrevLett);
+			PrevLett = str[i];
+			i++;
+		}
+		if (str[i] == PrevLett)
+			printf(, '_');
+		else
+			printf(, str[i-1]);
+
+
+		if (str[i] != '\0')
+		{
+			j = (strlen(str) - 1);
+			k = 0;
+
+			while ((j != i) && (strlen(str) != (i - 1)))
+			{
+				strbuf[k] = str[j];
+				j--;
+				k++;
+			}
+			strbuf[k] = '\0';
+			strcpy_s(str, strbuf);
+		}
+		else
+			str[0] = '\0';
+	}
+
+	getch();
+
+
+
+#include <stdlib.h>
+#include <conio.h>
+#include <stdio.h>
+#include <string.h>
+
+int main()
+
+	char str[20];
+	printf();
+	gets_s(str);
+	printf();
+
+
+	char PrevLett;
+	char strbuf[20];
+	int k;
+	int i;
+	int j;
+
+	while (strlen(str) != 0) 
+	{
+		PrevLett = str[0];
+		i = 1;
+		while ( (str[i] != PrevLett) && (str[i] != '\0') )
+ 		{
+			printf(,PrevLett);
+			PrevLett = str[i];
+			i++;
+		}
+		if (str[i] == PrevLett)
+			printf(, '_');
+		else
+			printf(, str[i-1]);
+
+
+		if (str[i] != '\0')
+		{
+			j = (strlen(str) - 1);
+			k = 0;
+
+			while ((j != i) && (strlen(str) != (i - 1)))
+			{
+				strbuf[k] = str[j];
+				j--;
+				k++;
+			}
+			strbuf[k] = '\0';
+			strcpy_s(str, strbuf);
+		}
+		else
+			str[0] = '\0';
+	}
+
+	getch();
+
+
+
