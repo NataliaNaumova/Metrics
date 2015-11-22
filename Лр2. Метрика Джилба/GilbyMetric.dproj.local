@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>1899.12.30 00:00:00.000.159,C:\Users\Артём\Documents\Embarcadero\Studio\Projects\Unit1.pas=C:\Users\Артём\Desktop\GilbyMetric\MainUnit.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.069,=C:\Users\Артём\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.842,C:\Users\Артём\Documents\Embarcadero\Studio\Projects\Project1.dproj=C:\Users\Артём\Desktop\GilbyMetric\GilbyMetric.dproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.159,C:\Users\Артём\Documents\Embarcadero\Studio\Projects\Unit1.dfm=C:\Users\Артём\Desktop\GilbyMetric\MainUnit.dfm</Transaction>
+  </Transactions>
+</BorlandProject>
